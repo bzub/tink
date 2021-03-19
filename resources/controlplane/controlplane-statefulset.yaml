@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: controlplane
+spec:
+  serviceName: controlplane
+  template:
+    spec:
+      terminationGracePeriodSeconds: 10
+      initContainers: []
+      containers:
+      - name: talos
+        image: ghcr.io/talos-systems/talos
+        volumeMounts:
+        - name: var-lib-kubelet
+          mountPath: /var/lib/kubelet
+        - name: var-lib-containerd
+          mountPath: /var/lib/containerd
+        - name: var-lib-etcd
+          mountPath: /var/lib/etcd
+        - name: etc-cni
+          mountPath: /etc/cni
+        - name: run
+          mountPath: /run
+        - name: system
+          mountPath: /system
+        env:
+        - name: PLATFORM
+          value: container
+        ports:
+        - containerPort: 6443
+          name: kube-api
+        - containerPort: 50000
+          name: talos-api
+        securityContext:
+          privileged: true
+      volumes:
+      - name: var-lib-kubelet
+      - name: var-lib-containerd
+      - name: var-lib-etcd
+      - name: etc-cni
+      - name: run
+      - name: system

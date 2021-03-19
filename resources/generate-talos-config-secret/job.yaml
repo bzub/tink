@@ -1,0 +1,55 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: generate-talos-config-secret
+spec:
+  template:
+    spec:
+      serviceAccountName: generate-talos-config-secret
+      restartPolicy: OnFailure
+      volumes:
+        - name: talos-config
+      initContainers:
+      - name: talos-gen-config
+        workingDir: /talos-config
+        image: ghcr.io/talos-systems/talosctl
+        args:
+        - gen
+        - config
+        - $(CLUSTER_NAME)
+        - "https://$(CLUSTER_NAME)-controlplane.$(NAMESPACE).svc.$(HOST_CLUSTER_DOMAIN):6443"
+        env:
+        - name: CLUSTER_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['cluster.x-k8s.io/cluster-name']
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: HOST_CLUSTER_DOMAIN
+          value: cluster.local
+        volumeMounts:
+        - name: talos-config
+          mountPath: /talos-config
+      containers:
+      - name: kubectl-create-secret
+        workingDir: /talos-config
+        image: docker.io/bitnami/kubectl
+        args:
+        - create
+        - secret
+        - generic
+        - $(CLUSTER_NAME)
+        - --from-file=controlplane.yaml
+        - --from-file=init.yaml
+        - --from-file=join.yaml
+        - --from-file=talosconfig
+        env:
+        - name: CLUSTER_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['cluster.x-k8s.io/cluster-name']
+        volumeMounts:
+        - name: talos-config
+          mountPath: /talos-config

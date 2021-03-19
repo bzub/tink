@@ -1,0 +1,86 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ../generate-talos-config-secret
+- ../controlplane
+namespace: default
+images:
+- name: ghcr.io/talos-systems/talos
+  newTag: v0.9.0-beta.1
+- name: ghcr.io/talos-systems/talosctl
+  newTag: v0.10.0-alpha.0-4-g24cd0a20
+- name: docker.io/mikefarah/yq
+  newTag: 4.6.1
+- name: docker.io/bitnami/kubectl
+  newTag: 1.20.5
+commonLabels:
+  app.kubernetes.io/name: talos
+  app.kubernetes.io/instance: mycluster
+  cluster.x-k8s.io/cluster-name: mycluster
+namePrefix: mycluster-
+configMapGenerator:
+- name: config
+  literals:
+  - POD_SUBNET=10.246.0.0/16
+  - SERVICE_SUBNET=10.112.0.0/16
+patches:
+- target:
+    kind: StatefulSet
+    group: apps
+    version: v1
+    name: controlplane
+  patch: |-
+    - op: add
+      path: /spec/template/spec/volumes/-
+      value:
+        name: talos-configs
+        secret:
+          secretName: mycluster
+          optional: false
+    - op: add
+      path: /spec/template/spec/initContainers/-
+      value:
+        name: config
+        image: docker.io/mikefarah/yq
+        command:
+        - sh
+        - -ec
+        - |-
+          mkdir -p /system/state
+          cp /talos-configs/init.yaml /system/state/config.yaml
+
+          cluster_name="$(CLUSTER_NAME)"
+          pod_subnet="$(POD_SUBNET)"
+          service_subnet="$(SERVICE_SUBNET)"
+          nameserver="$(cat /etc/resolv.conf|grep -E '^nameserver '|awk '{print $2}')"
+          ns_domain="$(cat /etc/resolv.conf|grep -E '^search '|awk '{print $2}')"
+          certSANs='[
+            "127.0.0.1",
+            "'${cluster_name}'-controlplane.'${ns_domain}'"
+          ]'
+
+          config_set() {
+            expr="${1}"
+            value="${2}"
+            yq eval --inplace "${expr} = ${value}" /system/state/config.yaml
+          }
+
+          config_set ".machine.network.nameservers" '["'${nameserver}'"]'
+          config_set ".machine.certSANs" "${certSANs}"
+          config_set ".cluster.apiServer.certSANs" "${certSANs}"
+          config_set ".cluster.network.dnsDomain" "\"${cluster_name}.local\""
+          config_set ".cluster.network.podSubnets" '["'${pod_subnet}'"]'
+          config_set ".cluster.network.serviceSubnets" '["'${service_subnet}'"]'
+        envFrom:
+        - configMapRef:
+            name: config
+        env:
+        - name: CLUSTER_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['cluster.x-k8s.io/cluster-name']
+        volumeMounts:
+        - name: talos-configs
+          mountPath: /talos-configs
+        - name: system
+          mountPath: /system
