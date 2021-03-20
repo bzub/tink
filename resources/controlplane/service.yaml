@@ -4,6 +4,7 @@ metadata:
   name: controlplane
 spec:
   type: ClusterIP
+  clusterIP: None
   ports:
   - name: kube-api
     port: 6443

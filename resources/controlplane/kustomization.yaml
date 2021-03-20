@@ -6,6 +6,5 @@ resources:
 namespace: kink
 commonLabels:
   app.kubernetes.io/name: talos
-  app.kubernetes.io/component: controlplane
-secretGenerator:
-- name: controlplane
+  app.kubernetes.io/component: node
+  node-role.kubernetes.io/control-plane: ""
