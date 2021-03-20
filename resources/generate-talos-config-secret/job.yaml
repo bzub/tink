@@ -17,7 +17,7 @@ spec:
         - gen
         - config
         - $(CLUSTER_NAME)
-        - "https://$(CLUSTER_NAME)-controlplane.$(NAMESPACE).svc.$(HOST_CLUSTER_DOMAIN):6443"
+        - "https://controlplane.$(NAMESPACE).svc.$(HOST_CLUSTER_DOMAIN):6443"
         env:
         - name: CLUSTER_NAME
           valueFrom:

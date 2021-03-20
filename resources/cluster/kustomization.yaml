@@ -17,18 +17,18 @@ commonLabels:
   app.kubernetes.io/name: talos
   app.kubernetes.io/instance: mycluster
   cluster.x-k8s.io/cluster-name: mycluster
-namePrefix: mycluster-
 configMapGenerator:
 - name: config
   literals:
   - POD_SUBNET=10.246.0.0/16
   - SERVICE_SUBNET=10.112.0.0/16
+  - NAME_PREFIX=
 patches:
 - target:
     kind: StatefulSet
     group: apps
     version: v1
-    name: controlplane
+    labelselector: app.kubernetes.io/name=talos,app.kubernetes.io/component=node
   patch: |-
     - op: add
       path: /spec/template/spec/volumes/-
@@ -38,17 +38,48 @@ patches:
           secretName: mycluster
           optional: false
     - op: add
+      path: /spec/template/spec/volumes/-
+      value:
+        name: podinfo
+        downwardAPI:
+          items:
+            - path: "labels"
+              fieldRef:
+                fieldPath: metadata.labels
+
+    - op: add
       path: /spec/template/spec/initContainers/-
       value:
-        name: config
+        name: config-select
+        image: docker.io/library/alpine
+        command:
+        - sh
+        - -ec
+        - |-
+          cfg_file=join.yaml
+          if cat /podinfo/labels | grep -Fq "node-role.kubernetes.io/control-plane="; then
+            cfg_file=controlplane.yaml
+          fi
+          mkdir -p /system/state
+          cp "/talos-configs/${cfg_file}" /system/state/config.yaml
+        volumeMounts:
+        - name: talos-configs
+          mountPath: /talos-configs
+        - name: system
+          mountPath: /system
+        - name: podinfo
+          mountPath: /podinfo
+
+    - op: add
+      path: /spec/template/spec/initContainers/-
+      value:
+        name: config-tink
         image: docker.io/mikefarah/yq
         command:
         - sh
         - -ec
         - |-
-          mkdir -p /system/state
-          cp /talos-configs/init.yaml /system/state/config.yaml
-
+          prefix="$(NAME_PREFIX)"
           cluster_name="$(CLUSTER_NAME)"
           pod_subnet="$(POD_SUBNET)"
           service_subnet="$(SERVICE_SUBNET)"
@@ -56,7 +87,11 @@ patches:
           ns_domain="$(cat /etc/resolv.conf|grep -E '^search '|awk '{print $2}')"
           certSANs='[
             "127.0.0.1",
-            "'${cluster_name}'-controlplane.'${ns_domain}'"
+            "localhost",
+            "'${prefix}'controlplane.'${ns_domain}'",
+            "'${prefix}'controlplane-0.'${prefix}'controlplane.'${ns_domain}'",
+            "'${prefix}'controlplane-1.'${prefix}'controlplane.'${ns_domain}'",
+            "'${prefix}'controlplane-2.'${prefix}'controlplane.'${ns_domain}'"
           ]'
 
           config_set() {
