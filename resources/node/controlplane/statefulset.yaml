@@ -14,3 +14,14 @@ spec:
           name: kube-api
         - containerPort: 50000
           name: talos-api
+        volumeMounts:
+        - name: talos-config
+          mountPath: /talos-config
+      volumes:
+      - name: talos-config
+        secret:
+          secretName: tint
+          items:
+          - key: controlplane.yaml
+            path: config.yaml
+          optional: false

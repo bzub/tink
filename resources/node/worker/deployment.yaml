@@ -8,3 +8,14 @@ spec:
       initContainers: []
       containers:
       - name: talos
+        volumeMounts:
+        - name: talos-config
+          mountPath: /talos-config
+      volumes:
+      - name: talos-config
+        secret:
+          secretName: tint
+          items:
+          - key: join.yaml
+            path: config.yaml
+          optional: false

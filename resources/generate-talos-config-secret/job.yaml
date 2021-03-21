@@ -17,18 +17,48 @@ spec:
         - gen
         - config
         - $(CLUSTER_NAME)
-        - "https://controlplane.$(NAMESPACE).svc.$(HOST_CLUSTER_DOMAIN):6443"
-        env:
-        - name: CLUSTER_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.labels['cluster.x-k8s.io/cluster-name']
-        - name: NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
-        - name: HOST_CLUSTER_DOMAIN
-          value: cluster.local
+        - https://$(CONTROLPLANE_SERVICE_FQDN):$(CONTROLPLANE_SERVICE_PORT)
+        envFrom:
+        - configMapRef:
+            name: config
+        volumeMounts:
+        - name: talos-config
+          mountPath: /talos-config
+      - name: tink-config
+        workingDir: /talos-config
+        image: docker.io/mikefarah/yq
+        command:
+        - sh
+        - -ec
+        - |-
+          podSubnets="${POD_SUBNETS}"
+          serviceSubnets="${SERVICE_SUBNETS}"
+          certSANs="${CERT_SANS}"
+          dnsDomain="${CLUSTER_DOMAIN}"
+
+          nameservers="${NAMESERVERS}"
+          if [ -z "${nameservers}" ]; then
+            nameservers="$(cat /etc/resolv.conf|grep -E '^nameserver '|awk '{print $2}')"
+            nameservers='["'${nameservers}'"]'
+          fi
+
+          config_set() {
+            expr="${1}"
+            value="${2}"
+            yq eval --inplace "${expr} = ${value}" init.yaml
+            yq eval --inplace "${expr} = ${value}" controlplane.yaml
+            yq eval --inplace "${expr} = ${value}" join.yaml
+          }
+
+          config_set ".machine.network.nameservers" "${nameservers}"
+          config_set ".machine.certSANs" "${certSANs}"
+          config_set ".cluster.apiServer.certSANs" "${certSANs}"
+          config_set ".cluster.network.dnsDomain" "\"${dnsDomain}\""
+          config_set ".cluster.network.podSubnets" "${podSubnets}"
+          config_set ".cluster.network.serviceSubnets" "${serviceSubnets}"
+        envFrom:
+        - configMapRef:
+            name: config
         volumeMounts:
         - name: talos-config
           mountPath: /talos-config
@@ -45,11 +75,9 @@ spec:
         - --from-file=init.yaml
         - --from-file=join.yaml
         - --from-file=talosconfig
-        env:
-        - name: CLUSTER_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.labels['cluster.x-k8s.io/cluster-name']
+        envFrom:
+        - configMapRef:
+            name: config
         volumeMounts:
         - name: talos-config
           mountPath: /talos-config

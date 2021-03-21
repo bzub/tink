@@ -9,12 +9,26 @@ patches:
     version: v1
   patch: |-
     apiVersion: apps/v1
-    kind: StatefulSet
+    kind: DoesNotMatter
     metadata:
-      name: node
+      name: does-not-matter
     spec:
       template:
         spec:
+          initContainers:
+          - name: copy-config
+            image: docker.io/library/alpine
+            command:
+            - sh
+            - -ec
+            - |-
+              mkdir -p /system/state
+              cp /talos-config/config.yaml /system/state/config.yaml
+            volumeMounts:
+            - name: talos-config
+              mountPath: /talos-config
+            - name: system
+              mountPath: /system
           containers:
           - name: talos
             image: ghcr.io/talos-systems/talos
