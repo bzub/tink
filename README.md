@@ -9,7 +9,8 @@
 
 ## Quick Start
 
-Start a single node cluster with default settings.
+Deploy a cluster with one control-plane node, one worker node, and default
+settings.
 ```sh
 kustomize build "github.com/bzub/tink/resources/cluster" | kubectl apply -f -
 ```

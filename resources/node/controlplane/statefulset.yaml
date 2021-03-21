@@ -1,0 +1,16 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: controlplane
+spec:
+  serviceName: controlplane
+  template:
+    spec:
+      initContainers: []
+      containers:
+      - name: talos
+        ports:
+        - containerPort: 6443
+          name: kube-api
+        - containerPort: 50000
+          name: talos-api
