@@ -18,4 +18,6 @@ spec:
           items:
           - key: join.yaml
             path: config.yaml
+          - key: talosconfig
+            path: talosconfig
           optional: false
