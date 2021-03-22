@@ -16,6 +16,24 @@ patches:
       template:
         spec:
           initContainers:
+          - name: get-assets
+            image: docker.io/curlimages/curl:7.75.0
+            command:
+            - sh
+            - -ec
+            - |-
+              curl -L -o /talos/bin/talosctl \
+                "https://github.com/talos-systems/talos/releases/download/v0.9.0-beta.1/talosctl-linux-amd64"
+              chmod +x /talos/bin/talosctl
+
+              curl -L -o /talos/bin/kubectl \
+                "https://dl.k8s.io/release/v1.20.5/bin/linux/amd64/kubectl"
+              chmod +x /talos/bin/kubectl
+            volumeMounts:
+            - name: talos-config
+              mountPath: /talos-config
+            - name: talos-bin
+              mountPath: /talos/bin
           - name: copy-config
             image: docker.io/library/alpine
             command:
@@ -24,6 +42,7 @@ patches:
             - |-
               mkdir -p /system/state
               cp /talos-config/config.yaml /system/state/config.yaml
+              cp /talos-config/talosconfig /system/state/talosconfig
             volumeMounts:
             - name: talos-config
               mountPath: /talos-config
@@ -45,6 +64,8 @@ patches:
               mountPath: /run
             - name: system
               mountPath: /system
+            - name: talos-bin
+              mountPath: /talos/bin
             env:
             - name: PLATFORM
               value: container
@@ -57,3 +78,4 @@ patches:
           - name: etc-cni
           - name: run
           - name: system
+          - name: talos-bin
