@@ -16,6 +16,8 @@ configMapGenerator:
   - CONTROLPLANE_SERVICE_PORT=6443
   - POD_SUBNETS=["10.244.0.0/16"]
   - SERVICE_SUBNETS=["10.96.0.0/12"]
+  - >-
+    ETCD_EXTRA_ARGS={"logger": "zap"}
   - |-
     CERT_SANS=[
       "127.0.0.1",

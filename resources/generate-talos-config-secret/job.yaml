@@ -35,6 +35,7 @@ spec:
           serviceSubnets="${SERVICE_SUBNETS}"
           certSANs="${CERT_SANS}"
           dnsDomain="${CLUSTER_DOMAIN}"
+          etcd_extraArgs="${ETCD_EXTRA_ARGS}"
 
           nameservers="${NAMESERVERS}"
           if [ -z "${nameservers}" ]; then
@@ -56,6 +57,7 @@ spec:
           config_set ".cluster.network.dnsDomain" "\"${dnsDomain}\""
           config_set ".cluster.network.podSubnets" "${podSubnets}"
           config_set ".cluster.network.serviceSubnets" "${serviceSubnets}"
+          config_set ".cluster.etcd.extraArgs" "${etcd_extraArgs}"
         envFrom:
         - configMapRef:
             name: config

@@ -6,6 +6,7 @@ spec:
   serviceName: controlplane
   template:
     spec:
+      subdomain: controlplane
       initContainers: []
       containers:
       - name: talos

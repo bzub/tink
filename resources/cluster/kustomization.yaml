@@ -18,6 +18,9 @@ commonLabels:
   app.kubernetes.io/name: talos
   app.kubernetes.io/instance: mycluster
   cluster.x-k8s.io/cluster-name: mycluster
+replicas:
+- name: controlplane
+  count: 1
 configMapGenerator:
 - name: config
   behavior: merge
