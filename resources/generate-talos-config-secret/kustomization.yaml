@@ -10,8 +10,8 @@ commonLabels:
 configMapGenerator:
 - name: config
   literals:
-  - CLUSTER_NAME=tint
-  - CLUSTER_DOMAIN=tint.local
+  - CLUSTER_NAME=tink
+  - CLUSTER_DOMAIN=tink.local
   - CONTROLPLANE_SERVICE_FQDN=controlplane.default.svc.cluster.local
   - CONTROLPLANE_SERVICE_PORT=6443
   - POD_SUBNETS=["10.244.0.0/16"]
