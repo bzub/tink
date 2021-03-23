@@ -1,0 +1,30 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: bootstrap
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: bootstrap
+        image: ghcr.io/talos-systems/talosctl
+        args:
+        - --talosconfig=/talos/config
+        - --endpoints=$(CONTROLPLANE_SERVICE_FQDN)
+        - --nodes=controlplane-0.$(CONTROLPLANE_SERVICE_FQDN)
+        - bootstrap
+        envFrom:
+        - configMapRef:
+            name: config
+        volumeMounts:
+        - name: talos-config
+          mountPath: /talos
+      volumes:
+      - name: talos-config
+        secret:
+          secretName: tink
+          optional: false
+          items:
+          - key: talosconfig
+            path: config
