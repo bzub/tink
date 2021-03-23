@@ -14,7 +14,7 @@ spec:
       volumes:
       - name: talos-config
         secret:
-          secretName: tint
+          secretName: tink
           items:
           - key: join.yaml
             path: config.yaml

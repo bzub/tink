@@ -13,8 +13,6 @@ spec:
         ports:
         - containerPort: 6443
           name: kube-api
-        - containerPort: 50000
-          name: talos-api
         lifecycle:
           preStop:
             exec:
@@ -28,7 +26,7 @@ spec:
       volumes:
       - name: talos-config
         secret:
-          secretName: tint
+          secretName: tink
           items:
           - key: controlplane.yaml
             path: config.yaml
