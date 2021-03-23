@@ -1,6 +1,8 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
+- ../config
+- ../bootstrap
 - ../generate-talos-config-secret
 - ../node/controlplane
 - ../node/worker
@@ -18,9 +20,6 @@ commonLabels:
   app.kubernetes.io/name: talos
   app.kubernetes.io/instance: mycluster
   cluster.x-k8s.io/cluster-name: mycluster
-replicas:
-- name: controlplane
-  count: 1
 configMapGenerator:
 - name: config
   behavior: merge
@@ -38,6 +37,22 @@ patches:
     kind: SomeNode
     metadata:
       name: some-node
+    spec:
+      template:
+        spec:
+          volumes:
+          - name: talos-config
+            secret:
+              secretName: mycluster
+- target:
+    group: batch
+    version: v1
+    name: bootstrap
+  patch: |-
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      name: bootstrap
     spec:
       template:
         spec:
