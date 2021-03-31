@@ -1,0 +1,61 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+patches:
+- target:
+    group: apps
+    version: v1
+    labelselector: app.kubernetes.io/name=talos,app.kubernetes.io/component=node
+  patch: |-
+    - op: add
+      path: /spec/template/spec/initContainers/-
+      value:
+        name: kustomize-config
+        image: k8s.gcr.io/kustomize/kustomize:v4.0.5
+        workingDir: /kustomize-config
+        command:
+        - sh
+        - -ec
+        - |-
+          mkdir 00-set-nameserver
+          cd 00-set-nameserver
+          cat <<EOF > kustomization.yaml
+          kind: Component
+          patches:
+          - target:
+              kind: MachineConfig
+              group: config.talos.dev
+              version: v1alpha1
+            patch: |-
+              - op: add
+                path: /machine/network/nameservers
+                value:
+                  - "$(cat /etc/resolv.conf|grep -E '^nameserver '|awk '{print $2}')"
+          EOF
+          cd ..
+
+          kustomize create --autodetect --recursive
+          sed -i -e 's/^resources:/components:/' kustomization.yaml
+
+          cp /system/state/config.yaml .
+          cat <<'EOF' >> config.yaml
+          apiVersion: config.talos.dev/v1alpha1
+          kind: MachineConfig
+          metadata:
+            name: machineconfig
+          EOF
+
+          kustomize edit add resource config.yaml
+          kustomize build | kustomize cfg tree
+          kustomize build
+          kustomize build > /system/state/config.yaml
+        volumeMounts:
+        - name: default-kustomization
+          mountPath: /kustomize-config/default-kustomization
+        - name: system
+          mountPath: /system
+    - op: add
+      path: /spec/template/spec/volumes/-
+      value:
+        name: default-kustomization
+        configMap:
+          name: default-kustomization
