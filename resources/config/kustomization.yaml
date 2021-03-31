@@ -7,34 +7,60 @@ configMapGenerator:
   - CLUSTER_DOMAIN=tink.local
   - CONTROLPLANE_SERVICE_FQDN=controlplane.default.svc.cluster.local
   - CONTROLPLANE_SERVICE_PORT=6443
-  - POD_SUBNETS=["10.244.0.0/16"]
-  - SERVICE_SUBNETS=["10.96.0.0/12"]
-  - CNI_NAME=flannel
-  - CNI_URLS=[]
-  - KUBEPROXY_DISABLED=false
-  - >-
-    ETCD_EXTRA_ARGS={
-      "logger": "zap",
-      "listen-metrics-urls": "http://0.0.0.0:8080"
-    }
+
+- name: default-kustomization
+  literals:
   - |-
-    CERT_SANS=[
-      "127.0.0.1",
-      "localhost",
-      "controlplane",
-      "controlplane.default",
-      "controlplane.default.svc",
-      "controlplane.default.svc.cluster.local",
-      "controlplane-0.controlplane",
-      "controlplane-0.controlplane.default",
-      "controlplane-0.controlplane.default.svc",
-      "controlplane-0.controlplane.default.svc.cluster.local",
-      "controlplane-1.controlplane",
-      "controlplane-1.controlplane.default",
-      "controlplane-1.controlplane.default.svc",
-      "controlplane-1.controlplane.default.svc.cluster.local",
-      "controlplane-2.controlplane",
-      "controlplane-2.controlplane.default",
-      "controlplane-2.controlplane.default.svc",
-      "controlplane-2.controlplane.default.svc.cluster.local"
-    ]
+    kustomization.yaml=
+    kind: Component
+    patches:
+    - target:
+        kind: MachineConfig
+        group: config.talos.dev
+        version: v1alpha1
+      patch: |-
+        apiVersion: config.talos.dev/v1alpha1
+        kind: MachineConfig
+        metadata:
+          name: does-not-matter
+        machine:
+          certSANs:
+          - 127.0.0.1
+          - localhost
+          - controlplane
+          - controlplane.default
+          - controlplane.default.svc
+          - controlplane.default.svc.cluster.local
+          - controlplane-0.controlplane
+          - controlplane-0.controlplane.default
+          - controlplane-0.controlplane.default.svc
+          - controlplane-0.controlplane.default.svc.cluster.local
+          - controlplane-1.controlplane
+          - controlplane-1.controlplane.default
+          - controlplane-1.controlplane.default.svc
+          - controlplane-1.controlplane.default.svc.cluster.local
+          - controlplane-2.controlplane
+          - controlplane-2.controlplane.default
+          - controlplane-2.controlplane.default.svc
+          - controlplane-2.controlplane.default.svc.cluster.local"
+        cluster:
+          apiServer:
+            certSANs:
+            - 127.0.0.1
+            - localhost
+            - controlplane
+            - controlplane.default
+            - controlplane.default.svc
+            - controlplane.default.svc.cluster.local
+            - controlplane-0.controlplane
+            - controlplane-0.controlplane.default
+            - controlplane-0.controlplane.default.svc
+            - controlplane-0.controlplane.default.svc.cluster.local
+            - controlplane-1.controlplane
+            - controlplane-1.controlplane.default
+            - controlplane-1.controlplane.default.svc
+            - controlplane-1.controlplane.default.svc.cluster.local
+            - controlplane-2.controlplane
+            - controlplane-2.controlplane.default
+            - controlplane-2.controlplane.default.svc
+            - controlplane-2.controlplane.default.svc.cluster.local"

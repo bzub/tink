@@ -2,10 +2,13 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
 - ../config
-- ../bootstrap
-- ../generate-talos-config-secret
 - ../node/controlplane
 - ../node/worker
+- ../bootstrap
+- ../generate-talos-config-secret
+components:
+- ../node/kustomize-config
+- ../node/common
 namespace: default
 images:
 - name: ghcr.io/talos-systems/talos
@@ -20,13 +23,16 @@ commonLabels:
   app.kubernetes.io/name: talos
   app.kubernetes.io/instance: mycluster
   cluster.x-k8s.io/cluster-name: mycluster
+
 configMapGenerator:
 - name: config
   behavior: merge
   literals:
   - CLUSTER_NAME=mycluster
-  - POD_SUBNETS=["10.246.0.0/16"]
-  - SERVICE_SUBNETS=["10.112.0.0/16"]
+  - CLUSTER_DOMAIN=mycluster.local
+  - CONTROLPLANE_SERVICE_FQDN=controlplane.default.svc.cluster.local
+  - CONTROLPLANE_SERVICE_PORT=6443
+
 patches:
 - target:
     group: apps
@@ -44,6 +50,7 @@ patches:
           - name: talos-config
             secret:
               secretName: mycluster
+
 - target:
     group: batch
     version: v1

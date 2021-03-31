@@ -3,7 +3,7 @@ kind: Kustomization
 resources:
 - statefulset.yaml
 - service.yaml
-components:
-- ../common
 commonLabels:
+  app.kubernetes.io/name: talos
+  app.kubernetes.io/component: node
   node-role.kubernetes.io/control-plane: ""
