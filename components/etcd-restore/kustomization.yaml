@@ -1,0 +1,115 @@
+kind: Component
+
+configMapGenerator:
+- name: etcd-restore
+  literals:
+  - SNAPSHOT_SHA512SUM=
+  - SNAPSHOT_FILE=/etcd-snapshot/snapshot.db
+  - ETCD_INITIAL_CLUSTER_TOKEN=etcd-cluster
+  - SKIP_HASH_CHECK=false
+  - ETCD_DATA_DIR=/var/lib/etcd
+
+patches:
+- target:
+    kind: StatefulSet
+    version: v1
+    labelselector: app.kubernetes.io/name=talos,app.kubernetes.io/component=node,node-role.kubernetes.io/control-plane=
+  patch: |-
+    - op: add
+      path: /spec/template/spec/initContainers/-
+      value:
+        name: etcd-snapshot-upload-wait
+        image: docker.io/library/alpine
+        command:
+        - sh
+        - -ec
+        - |-
+          snapshot_file="${SNAPSHOT_FILE}"
+          if [ -z "${snapshot_file}" ]; then
+            echo "[ERROR] SNAPSHOT_FILE not set."
+            exit 1
+          fi
+
+          snapshot_sha512sum="${SNAPSHOT_SHA512SUM}"
+          if [ -z "${snapshot_sha512sum}" ]; then
+            echo "[ERROR] SNAPSHOT_SHA512SUM not set."
+            exit 1
+          fi
+
+          timeout=600
+          inc=30
+          time=0
+          while [ ! -f "${snapshot_file}" ]; do
+            echo "[INFO] Waiting for file \"${snapshot_file}\" - ${time}s/${timeout}s"
+            sleep "${inc}s"
+            time="$((time+inc))"
+            if [ "${time}" -ge "${timeout}" ]; then
+              echo "[ERROR] Timed out waiting for snapshot file."
+              exit 1
+            fi
+          done
+          echo "[INFO] Found file \"${snapshot_file}\""
+
+          echo "${snapshot_sha512sum}  ${snapshot_file}" > /tmp/check
+          while ! sha512sum -c /tmp/check; do
+            echo "[INFO] ${time}s/${timeout}s"
+            sleep "${inc}s"
+            time="$((time+inc))"
+            if [ "${time}" -ge "${timeout}" ]; then
+              echo "[ERROR] Timed out waiting for snapshot file."
+              exit 1
+            fi
+          done
+        envFrom:
+        - configMapRef:
+            name: etcd-restore
+        volumeMounts:
+        - name: etcd-snapshot
+          mountPath: /etcd-snapshot
+
+    - op: add
+      path: /spec/template/spec/initContainers/-
+      value:
+        name: etcdctl-restore
+        image: gcr.io/etcd-development/etcd:v3.4.15
+        command:
+        - sh
+        - -exc
+        - |-
+          etcdctl snapshot restore "${SNAPSHOT_FILE}" \
+            "--name=${POD_NAME}" \
+            "--initial-cluster=controlplane-0=https://${POD_IP}:2380" \
+            "--initial-cluster-token=${ETCD_INITIAL_CLUSTER_TOKEN}" \
+            "--initial-advertise-peer-urls=https://${POD_IP}:2380" \
+            "--skip-hash-check=${SKIP_HASH_CHECK}" \
+            "--data-dir=/etcd-restore"
+
+          mv "/etcd-restore/member" "${ETCD_DATA_DIR}"
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        envFrom:
+        - configMapRef:
+            name: etcd-restore
+        volumeMounts:
+        - name: etcd-snapshot
+          mountPath: /etcd-snapshot
+        - name: var-lib-etcd
+          mountPath: /var/lib/etcd
+
+    - op: add
+      path: /spec/template/spec/volumes/-
+      value:
+        name: etcd-snapshot
+
+    - op: replace
+      path: /spec/updateStrategy
+      value:
+        rollingUpdate:
+          partition: 1
