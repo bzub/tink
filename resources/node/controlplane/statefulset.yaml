@@ -10,19 +10,15 @@ spec:
       initContainers: []
       containers:
       - name: talos
+        env:
+        - name: USERDATA
+          valueFrom:
+            secretKeyRef:
+              name: mycluster
+              key: controlplane-base64
         ports:
         - containerPort: 6443
           name: kube-api
-        lifecycle:
-          preStop:
-            exec:
-              command:
-              - /talos/bin/talosctl
-              - --talosconfig=/system/state/talosconfig
-              - --endpoints=localhost
-              - --nodes=localhost
-              - etcd
-              - leave
       volumes:
       - name: talos-config
         secret:

@@ -12,42 +12,16 @@ patches:
     spec:
       template:
         spec:
-          initContainers:
-          - name: get-assets
-            image: docker.io/curlimages/curl:7.75.0
-            command:
-            - sh
-            - -ec
-            - |-
-              curl -L -o /talos/bin/talosctl \
-                "https://github.com/talos-systems/talos/releases/download/v0.9.0-beta.1/talosctl-linux-amd64"
-              chmod +x /talos/bin/talosctl
-            volumeMounts:
-            - name: talos-config
-              mountPath: /talos-config
-            - name: talos-bin
-              mountPath: /talos/bin
-          - name: copy-config
-            image: docker.io/library/alpine
-            command:
-            - sh
-            - -ec
-            - |-
-              mkdir -p /system/state
-              cp /talos-config/config.yaml /system/state/config.yaml
-              cp /talos-config/talosconfig /system/state/talosconfig
-            volumeMounts:
-            - name: talos-config
-              mountPath: /talos-config
-            - name: system
-              mountPath: /system
+          initContainers: []
           containers:
           - name: talos
-            image: ghcr.io/talos-systems/talos
+            image: ghcr.io/siderolabs/talos
             ports:
             - containerPort: 50000
               name: talos-api
             volumeMounts:
+            - name: var
+              mountPath: /var
             - name: var-lib-kubelet
               mountPath: /var/lib/kubelet
             - name: var-lib-containerd
@@ -56,76 +30,53 @@ patches:
               mountPath: /var/lib/etcd
             - name: etc-cni
               mountPath: /etc/cni
+            - name: etc-kubernetes
+              mountPath: /etc/kubernetes
             - name: run
               mountPath: /run
             - name: system
               mountPath: /system
-            - name: talos-bin
-              mountPath: /talos/bin
+            - name: opt
+              mountPath: /opt
+            - name: talos-config
+              mountPath: /talos-config
+            - name: tmp
+              mountPath: /tmp
             env:
             - name: PLATFORM
               value: container
             securityContext:
               privileged: true
+              readOnlyRootFilesystem: true
+              seccompProfile:
+                type: Unconfined
             startupProbe:
-              exec:
-                command:
-                - /talos/bin/talosctl
-                - --talosconfig=/system/state/talosconfig
-                - --endpoints=localhost
-                - --nodes=localhost
-                - version
+              tcpSocket:
+                port: 50000
               initialDelaySeconds: 30
               periodSeconds: 30
               timeoutSeconds: 2
               failureThreshold: 6
               successThreshold: 1
             livenessProbe:
-              exec:
-                command:
-                - /talos/bin/talosctl
-                - --talosconfig=/system/state/talosconfig
-                - --endpoints=localhost
-                - --nodes=localhost
-                - version
+              tcpSocket:
+                port: 50000
               initialDelaySeconds: 0
               periodSeconds: 30
               timeoutSeconds: 2
               failureThreshold: 3
               successThreshold: 1
           volumes:
+          - name: var
           - name: var-lib-kubelet
           - name: var-lib-containerd
           - name: var-lib-etcd
           - name: etc-cni
+          - name: etc-kubernetes
           - name: run
           - name: system
-          - name: talos-bin
-
-- target:
-    group: apps
-    version: v1
-    kind: StatefulSet
-  patch: |-
-    apiVersion: apps/v1
-    kind: StatefulSet
-    metadata:
-      name: controlplane
-    spec:
-      template:
-        spec:
-          containers:
-          - name: talos
-            readinessProbe:
-              httpGet:
-                path: /version
-                port: 6443
-                scheme: HTTPS
-              initialDelaySeconds: 30
-              periodSeconds: 30
-              timeoutSeconds: 2
-              failureThreshold: 1
-              successThreshold: 2
+          - name: opt
+          - name: tmp
 
 - target:
     group: apps
@@ -142,13 +93,8 @@ patches:
           containers:
           - name: talos
             readinessProbe:
-              exec:
-                command:
-                - /talos/bin/talosctl
-                - --talosconfig=/system/state/talosconfig
-                - --endpoints=localhost
-                - --nodes=localhost
-                - version
+              tcpSocket:
+                port: 50000
               initialDelaySeconds: 0
               periodSeconds: 30
               timeoutSeconds: 2

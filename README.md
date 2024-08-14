@@ -9,11 +9,12 @@
 
 ## Quick Start
 
-Deploy a cluster with one control-plane node, one worker node, and default
-settings.
+Deploy a cluster with one control-plane node, one worker node, and default settings.
 ```sh
 kustomize build "github.com/bzub/tink/resources/cluster" | kubectl apply -f -
 ```
+
+### Interacting With The New Cluster
 
 Proxy the talos and kubernetes APIs to your local machine.
 ```sh
@@ -24,21 +25,19 @@ kubectl port-forward svc/controlplane 6443:6443 &
 Get the talosconfig and kubeconfig for the cluster.
 ```sh
 kubectl get secret mycluster -o json |\
-  jq -r '.data["talosconfig"]' | base64 -D > /tmp/talosconfig
+  jq -r '.data["talosconfig"]|@base64d' > /tmp/talosconfig
 
 talosctl --talosconfig=/tmp/talosconfig \
-  config nodes controlplane-0.controlplane.default.svc.cluster.local
+  config nodes localhost
 
-talosctl --talosconfig /tmp/talosconfig \
+talosctl --talosconfig=/tmp/talosconfig \
+  config endpoint localhost
+
+talosctl --talosconfig /tmp/talosconfig -e localhost -n localhost \
   kubeconfig --force --merge=false /tmp/kubeconfig
 
 kubectl --kubeconfig /tmp/kubeconfig \
-  config set-cluster mycluster --server=https://127.0.0.1:6443
-```
-
-Bootstrap the cluster.
-```sh
-talosctl --talosconfig=/tmp/talosconfig bootstrap
+  config set-cluster mycluster --server=https://localhost:6443
 ```
 
 Watch the health checks until the boot completes. Should only take a few
