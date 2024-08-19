@@ -8,6 +8,12 @@ spec:
       initContainers: []
       containers:
       - name: talos
+        env:
+        - name: USERDATA
+          valueFrom:
+            secretKeyRef:
+              name: mycluster
+              key: worker-base64
         volumeMounts:
         - name: talos-config
           mountPath: /talos-config
@@ -16,7 +22,7 @@ spec:
         secret:
           secretName: tink
           items:
-          - key: join.yaml
+          - key: worker.yaml
             path: config.yaml
           - key: talosconfig
             path: talosconfig

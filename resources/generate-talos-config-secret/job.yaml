@@ -12,13 +12,69 @@ spec:
       initContainers:
       - name: talos-gen-config
         workingDir: /talos-config
-        image: ghcr.io/talos-systems/talosctl
+        image: ghcr.io/siderolabs/talosctl
         args:
         - gen
         - config
         - $(CLUSTER_NAME)
         - https://$(CONTROLPLANE_SERVICE_FQDN):$(CONTROLPLANE_SERVICE_PORT)
+        - --with-docs=false
+        - --with-examples=false
+        - --with-cluster-discovery=false
+        - --with-kubespan=false
+        - --additional-sans="controlplane.default.svc.cluster.local"
+        - --additional-sans="localhost"
+        # See: https://www.talos.dev/v1.7/talos-guides/install/cloud-platforms/kubernetes/#machine-configuration
+        - |-
+            --config-patch=
+              [
+                 {
+                    "op":"add",
+                    "path":"/machine/features/hostDNS/forwardKubeDNSToHost",
+                    "value":true
+                 },
+                 {
+                    "op":"add",
+                    "path":"/machine/features/hostDNS/resolveMemberNames",
+                    "value":true
+                 },
+                 {
+                    "op":"add",
+                    "path":"/machine/features/kubePrism",
+                    "value": {"enabled": false}
+                 },
+                 {
+                    "op":"replace",
+                    "path":"/cluster/network/podSubnets",
+                    "value": ["172.16.0.1/16"]
+                 },
+                 {
+                    "op":"replace",
+                    "path":"/cluster/network/serviceSubnets",
+                    "value": ["172.17.0.1/16"]
+                 },
+                 {
+                    "op":"add",
+                    "path":"/debug",
+                    "value":true
+                 }
+              ]
         - --dns-domain=$(CLUSTER_DOMAIN)
+        envFrom:
+        - configMapRef:
+            name: config
+        volumeMounts:
+        - name: talos-config
+          mountPath: /talos-config
+      - name: base64-encode
+        workingDir: /talos-config
+        image: docker.io/library/alpine
+        command:
+        - sh
+        - -ec
+        - |-
+            cat controlplane.yaml | base64 > controlplane-base64
+            cat worker.yaml | base64 > worker-base64
         envFrom:
         - configMapRef:
             name: config
@@ -35,8 +91,9 @@ spec:
         - generic
         - $(CLUSTER_NAME)
         - --from-file=controlplane.yaml
-        - --from-file=init.yaml
-        - --from-file=join.yaml
+        - --from-file=worker.yaml
+        - --from-file=controlplane-base64
+        - --from-file=worker-base64
         - --from-file=talosconfig
         envFrom:
         - configMapRef:

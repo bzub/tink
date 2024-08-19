@@ -8,11 +8,11 @@ spec:
       restartPolicy: OnFailure
       containers:
       - name: bootstrap
-        image: ghcr.io/talos-systems/talosctl
+        image: ghcr.io/siderolabs/talosctl
         args:
         - --talosconfig=/talos/config
         - --endpoints=$(CONTROLPLANE_SERVICE_FQDN)
-        - --nodes=controlplane-0.$(CONTROLPLANE_SERVICE_FQDN)
+        - --nodes=$(CONTROLPLANE_SERVICE_FQDN)
         - bootstrap
         envFrom:
         - configMapRef:

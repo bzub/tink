@@ -7,18 +7,17 @@ resources:
 - ../bootstrap
 - ../generate-talos-config-secret
 components:
-- ../node/kustomize-config
 - ../node/common
 namespace: default
 images:
-- name: ghcr.io/talos-systems/talos
-  newTag: v0.9.0-beta.1
-- name: ghcr.io/talos-systems/talosctl
-  newTag: v0.10.0-alpha.0-4-g24cd0a20
+- name: ghcr.io/siderolabs/talos
+  newTag: v1.7.6
+- name: ghcr.io/siderolabs/talosctl
+  newTag: v1.7.6
 - name: docker.io/mikefarah/yq
-  newTag: 4.6.1
+  newTag: 4.44.3
 - name: docker.io/bitnami/kubectl
-  newTag: 1.20.5
+  newTag: 1.29.7
 commonLabels:
   app.kubernetes.io/name: talos
   app.kubernetes.io/instance: mycluster
