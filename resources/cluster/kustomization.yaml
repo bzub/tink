@@ -20,10 +20,12 @@ images:
 - name: docker.io/bitnami/kubectl
   newTag: 1.29.7
 
-commonLabels:
-  app.kubernetes.io/name: talos
-  app.kubernetes.io/instance: mycluster
-  cluster.x-k8s.io/cluster-name: mycluster
+labels:
+- includeSelectors: true
+  pairs:
+    app.kubernetes.io/name: talos
+    app.kubernetes.io/instance: mycluster
+    cluster.x-k8s.io/cluster-name: mycluster
 
 configMapGenerator:
 - name: config
