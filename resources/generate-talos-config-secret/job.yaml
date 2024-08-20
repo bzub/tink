@@ -22,7 +22,7 @@ spec:
         - --with-examples=false
         - --with-cluster-discovery=false
         - --with-kubespan=false
-        - --additional-sans="controlplane.default.svc.cluster.local"
+        - --additional-sans="$(CONTROLPLANE_SERVICE_FQDN)"
         - --additional-sans="localhost"
         # See: https://www.talos.dev/v1.7/talos-guides/install/cloud-platforms/kubernetes/#machine-configuration
         - |-
