@@ -52,11 +52,6 @@ spec:
                     "op":"replace",
                     "path":"/cluster/network/serviceSubnets",
                     "value": ["172.17.0.1/16"]
-                 },
-                 {
-                    "op":"add",
-                    "path":"/debug",
-                    "value":true
                  }
               ]
         - --dns-domain=$(CLUSTER_DOMAIN)

@@ -1,0 +1,34 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+patches:
+- target:
+    group: apps
+    version: v1
+    labelselector: app.kubernetes.io/name=talos,app.kubernetes.io/component=node
+  patch: |-
+    apiVersion: apps/v1
+    kind: SomeNode
+    metadata:
+      name: some-node
+    spec:
+      template:
+        spec:
+          containers:
+          - name: talos
+            env:
+            - name: GODEBUG
+              value: netdns=go+2,http2debug=1
+- target:
+    group: batch
+    version: v1
+    kind: Job
+    name: generate-talos-config-secret
+  patch: |-
+    - op: add
+      path: /spec/template/spec/initContainers/0/args/-
+      value: |-
+          --config-patch=
+              - op: add
+                path: /debug
+                value: true
